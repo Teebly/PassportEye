@@ -1,4 +1,6 @@
+import base64
 import os
+from io import BytesIO
 
 from flask import Flask, request, jsonify
 
@@ -15,7 +17,13 @@ def health():
 
 @app.route("/extract", methods=["POST"])
 def handle_address_confirmation():
-    return jsonify(read_mrz(request.data).to_dict())
+    try:
+        return jsonify(read_mrz(request.data).to_dict())
+    except ValueError:
+        # https://stackoverflow.com/a/49459036/419338
+        # some JS implementation do not pad enough, but py3 will truncate redundant padding
+        decoded = base64.b64decode(request.data + b'=====')
+        return jsonify(read_mrz(BytesIO(decoded)).to_dict())
 
 
 # example usage:
