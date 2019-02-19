@@ -22,8 +22,14 @@ def handle_address_confirmation():
     except ValueError:
         # https://stackoverflow.com/a/49459036/419338
         # some JS implementation do not pad enough, but py3 will truncate redundant padding
-        decoded = base64.b64decode(request.data + b'=====')
-        return jsonify(read_mrz(BytesIO(decoded)).to_dict())
+        decoded = base64.b64decode(request.data + b"=====")
+        mrz = read_mrz(BytesIO(decoded))
+        if not mrz:
+            print(f"Could not extract anything")
+            return jsonify({})
+        d = mrz.to_dict()
+        print(f"Got doc type {d.get('type')} from {d.get('country')} with score {d['valid_score']}")
+        return jsonify(d)
 
 
 # example usage:
