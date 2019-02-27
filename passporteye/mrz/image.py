@@ -22,10 +22,11 @@ class Loader(object):
     __depends__ = []
     __provides__ = ['img']
 
-    def __init__(self, file, as_gray=True, pdf_aware=True):
+    def __init__(self, file, as_gray=True, pdf_aware=True, flip_horizontal=False):
         self.file = file
         self.as_gray = as_gray
         self.pdf_aware = pdf_aware
+        self.flip_horizontal = flip_horizontal
 
     def _imread(self, file):
         """Proxy to skimage.io.imread with some fixes."""
@@ -38,6 +39,8 @@ class Loader(object):
         if img is not None and len(img.shape) != 2:
             # The PIL plugin somewhy fails to load some images
             img = skimage_io.imread(file, as_gray=self.as_gray, plugin='matplotlib')
+        if self.flip_horizontal:
+            img = np.fliplr(img)
         return img
 
     def __call__(self):
@@ -309,11 +312,11 @@ class TryOtherMaxWidth(object):
 class MRZPipeline(Pipeline):
     """This is the "currently best-performing" pipeline for parsing MRZ from a given image file."""
 
-    def __init__(self, file, extra_cmdline_params=''):
+    def __init__(self, file, extra_cmdline_params='', flip_horizontal=False):
         super(MRZPipeline, self).__init__()
         self.version = '1.0'  # In principle we might have different pipelines in use, so possible backward compatibility is an issue
         self.file = file
-        self.add_component('loader', Loader(file))
+        self.add_component('loader', Loader(file, flip_horizontal=flip_horizontal))
         self.add_component('scaler', Scaler())
         self.add_component('boone', BooneTransform())
         self.add_component('box_locator', MRZBoxLocator())
@@ -325,7 +328,7 @@ class MRZPipeline(Pipeline):
         return self['mrz_final']
 
 
-def read_mrz(file, save_roi=False, extra_cmdline_params=''):
+def read_mrz(file, save_roi=False, flip_horizontal=False, extra_cmdline_params=''):
     """The main interface function to this module, encapsulating the recognition pipeline.
        Given an image filename, runs MRZPipeline on it, returning the parsed MRZ object.
 
@@ -333,7 +336,7 @@ def read_mrz(file, save_roi=False, extra_cmdline_params=''):
     :param save_roi: when this is True, the .aux['roi'] field will contain the Region of Interest where the MRZ was parsed from.
     :param extra_cmdline_params:extra parameters to the ocr.py
     """
-    p = MRZPipeline(file, extra_cmdline_params)
+    p = MRZPipeline(file, extra_cmdline_params, flip_horizontal=flip_horizontal)
     mrz = p.result
 
     if mrz is not None:

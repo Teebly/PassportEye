@@ -23,7 +23,7 @@ def handle_address_confirmation():
         # https://stackoverflow.com/a/49459036/419338
         # some JS implementation do not pad enough, but py3 will truncate redundant padding
         decoded = base64.b64decode(request.data + b"=====")
-        mrz = read_mrz(BytesIO(decoded))
+        mrz = read_mrz(BytesIO(decoded), flip_horizontal=request.headers.get('flip'))
         if not mrz:
             print(f"Could not extract anything")
             return jsonify({})
