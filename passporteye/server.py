@@ -18,14 +18,19 @@ def health():
 @app.route("/extract", methods=["POST"])
 def handle_address_confirmation():
     try:
-        return jsonify(read_mrz(request.data).to_dict())
+        mrz = read_mrz(request.data)
+        if mrz:
+            return jsonify(mrz.to_dict())
+        else:
+            print(f"Could not extract anything on first pass, will try base64")
+            raise ValueError
     except ValueError:
         # https://stackoverflow.com/a/49459036/419338
         # some JS implementation do not pad enough, but py3 will truncate redundant padding
         decoded = base64.b64decode(request.data + b"=====")
         mrz = read_mrz(BytesIO(decoded), flip_horizontal=request.headers.get('flip'))
         if not mrz:
-            print(f"Could not extract anything")
+            print(f"Could not extract anything on second pass")
             return jsonify({})
         d = mrz.to_dict()
         print(f"Got doc type {d.get('type')} from {d.get('country')} with score {d['valid_score']}")

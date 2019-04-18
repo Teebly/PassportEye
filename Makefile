@@ -1,2 +1,2 @@
 build-docker:
-	docker build -t teebly/passport .
+	docker build -t teebly/passport:`git rev-parse HEAD` .
